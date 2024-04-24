@@ -64,6 +64,21 @@ void Application::PreUpdate()
 // ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// /////
 void Application::Update()
 {
+	// カメラ行列の更新
+	{
+		// 大きさ
+		Math::Matrix _mScale = Math::Matrix::CreateScale(1);
+
+		// 基準点(ターゲット)からどれだけ離れているか
+		Math::Matrix _mlocalPos = Math::Matrix::CreateTranslation(0, 6, 0);
+
+		// どれだけ傾けているか
+		Math::Matrix _mRotation = Math::Matrix::CreateRotationX(DirectX::XMConvertToRadians(45));
+
+		// カメラのワールド行列を作成, 適応させる
+		Math::Matrix _mWorld = _mScale * _mRotation * _mlocalPos;
+		m_spCamera->SetCameraMatrix(_mWorld);
+	}
 }
 
 // ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// /////
@@ -100,6 +115,7 @@ void Application::KdPostDraw()
 // ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// /////
 void Application::PreDraw()
 {
+	m_spCamera->SetToShader();
 }
 
 // ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// /////
@@ -119,6 +135,18 @@ void Application::Draw()
 	// 陰影のあるオブジェクト(不透明な物体や2Dキャラ)はBeginとEndの間にまとめてDrawする
 	KdShaderManager::Instance().m_StandardShader.BeginLit();
 	{
+		static float zPos = 5;
+		Math::Matrix mat = Math::Matrix::CreateTranslation(0, 0, zPos);
+		//zPos += 0.01f;
+
+		KdShaderManager::Instance().m_StandardShader.DrawPolygon(*m_spPoly, mat);
+
+		KdShaderManager::Instance().m_StandardShader.DrawModel(*m_spModel);
+
+		mat = Math::Matrix::CreateRotationX(DirectX::XMConvertToRadians(90))* 
+			Math::Matrix::CreateTranslation(0, 1, 5) * 
+			Math::Matrix::CreateRotationY(DirectX::XMConvertToRadians(45));
+		KdShaderManager::Instance().m_StandardShader.DrawModel(*m_spTorus, mat);
 	}
 	KdShaderManager::Instance().m_StandardShader.EndLit();
 
@@ -178,9 +206,9 @@ bool Application::Init(int w, int h)
 	// フルスクリーン確認
 	//===================================================================
 	bool bFullScreen = false;
-	if (MessageBoxA(m_window.GetWndHandle(), "フルスクリーンにしますか？", "確認", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES) {
+	/*if (MessageBoxA(m_window.GetWndHandle(), "フルスクリーンにしますか？", "確認", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES) {
 		bFullScreen = true;
-	}
+	}*/
 
 	//===================================================================
 	// Direct3D初期化
@@ -220,6 +248,27 @@ bool Application::Init(int w, int h)
 	// オーディオ初期化
 	//===================================================================
 	KdAudioManager::Instance().Init();
+
+	//===================================================================
+	// カメラ初期化
+	//===================================================================
+	m_spCamera = std::make_shared<KdCamera>();
+
+	//===================================================================
+	// ポリゴン初期化
+	//===================================================================
+	m_spPoly = std::make_shared<KdSquarePolygon>();
+	m_spPoly->SetMaterial("Asset/Data/LessonData/Character/Hamu.png");
+	m_spPoly->SetPivot(KdSquarePolygon::PivotType::Center_Bottom);
+
+	//===================================================================
+	// 地形初期化
+	//===================================================================
+	m_spModel = std::make_shared<KdModelData>();
+	m_spModel->Load("Asset/Data/LessonData/Terrain/Terrain.gltf");
+
+	m_spTorus = std::make_shared<KdModelData>();
+	m_spTorus->Load("Asset/Data/LessonData/Torus/Torus.gltf");
 
 	return true;
 }
