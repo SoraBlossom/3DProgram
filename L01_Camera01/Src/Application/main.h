@@ -56,10 +56,12 @@ private:
 
 	// ポリゴンデータ
 	std::shared_ptr<KdSquarePolygon> m_spPoly = nullptr;
+	Math::Matrix m_mHamuWorld = Math::Matrix::Identity;
 
 	// 地形データ
 	std::shared_ptr<KdModelData> m_spModel = nullptr;
-	std::shared_ptr<KdModelData> m_spTorus = nullptr;
+
+	float m_deg = 0;
 
 //=====================================================
 // シングルトンパターン

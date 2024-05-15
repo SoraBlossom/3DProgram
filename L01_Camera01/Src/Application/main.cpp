@@ -64,21 +64,47 @@ void Application::PreUpdate()
 // ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// /////
 void Application::Update()
 {
+	//m_deg += 1.0f;
+	//if (m_deg > 360.0f) m_deg -= 360.0f;
+
 	// カメラ行列の更新
 	{
 		// 大きさ
 		Math::Matrix _mScale = Math::Matrix::CreateScale(1);
 
-		// 基準点(ターゲット)からどれだけ離れているか
-		Math::Matrix _mlocalPos = Math::Matrix::CreateTranslation(0, 6, 0);
-
 		// どれだけ傾けているか
-		Math::Matrix _mRotation = Math::Matrix::CreateRotationX(DirectX::XMConvertToRadians(45));
+		Math::Matrix _mRotationX = Math::Matrix::CreateRotationX(DirectX::XMConvertToRadians(45));
+
+		Math::Matrix _mRotationY = Math::Matrix::CreateRotationY(DirectX::XMConvertToRadians(m_deg));
+
+		// 基準点(ターゲット)からどれだけ離れているか
+		Math::Matrix _mlocalPos = Math::Matrix::CreateTranslation(0, 6, -5);
 
 		// カメラのワールド行列を作成, 適応させる
-		Math::Matrix _mWorld = _mScale * _mRotation * _mlocalPos;
+		Math::Matrix _mWorld = _mScale * _mRotationX * _mlocalPos * _mRotationY * Math::Matrix::CreateTranslation(m_mHamuWorld.Translation());
 		m_spCamera->SetCameraMatrix(_mWorld);
 	}
+
+	// ハム太郎の更新
+	{
+		float moveSpd = 0.2f;		// 仮
+		Math::Vector3 nowPos = m_mHamuWorld.Translation();
+
+		Math::Vector3 moveVec = Math::Vector3::Zero;		// 仮
+
+		if (GetAsyncKeyState('W') & 0x8000) moveVec.z = 1.0f;
+		if (GetAsyncKeyState('A') & 0x8000) moveVec.x = -1.0f;
+		if (GetAsyncKeyState('S') & 0x8000) moveVec.z = -1.0f;
+		if (GetAsyncKeyState('D') & 0x8000) moveVec.x = 1.0f;
+
+		moveVec *= moveSpd;
+		nowPos += moveVec;
+
+		m_mHamuWorld = Math::Matrix::CreateTranslation(nowPos);
+	}
+
+	//m_spCamera->SetCameraMatrix(m_spCamera->GetCameraMatrix() * Math::Matrix::CreateTranslation(m_mHamuWorld.Translation()));
+
 }
 
 // ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// /////
@@ -135,18 +161,9 @@ void Application::Draw()
 	// 陰影のあるオブジェクト(不透明な物体や2Dキャラ)はBeginとEndの間にまとめてDrawする
 	KdShaderManager::Instance().m_StandardShader.BeginLit();
 	{
-		static float zPos = 5;
-		Math::Matrix mat = Math::Matrix::CreateTranslation(0, 0, zPos);
-		//zPos += 0.01f;
-
-		KdShaderManager::Instance().m_StandardShader.DrawPolygon(*m_spPoly, mat);
+		KdShaderManager::Instance().m_StandardShader.DrawPolygon(*m_spPoly, m_mHamuWorld);
 
 		KdShaderManager::Instance().m_StandardShader.DrawModel(*m_spModel);
-
-		mat = Math::Matrix::CreateRotationX(DirectX::XMConvertToRadians(90))* 
-			Math::Matrix::CreateTranslation(0, 1, 5) * 
-			Math::Matrix::CreateRotationY(DirectX::XMConvertToRadians(45));
-		KdShaderManager::Instance().m_StandardShader.DrawModel(*m_spTorus, mat);
 	}
 	KdShaderManager::Instance().m_StandardShader.EndLit();
 
@@ -253,6 +270,7 @@ bool Application::Init(int w, int h)
 	// カメラ初期化
 	//===================================================================
 	m_spCamera = std::make_shared<KdCamera>();
+	m_deg = 0;
 
 	//===================================================================
 	// ポリゴン初期化
@@ -266,9 +284,6 @@ bool Application::Init(int w, int h)
 	//===================================================================
 	m_spModel = std::make_shared<KdModelData>();
 	m_spModel->Load("Asset/Data/LessonData/Terrain/Terrain.gltf");
-
-	m_spTorus = std::make_shared<KdModelData>();
-	m_spTorus->Load("Asset/Data/LessonData/Torus/Torus.gltf");
 
 	return true;
 }
